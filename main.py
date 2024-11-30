@@ -122,33 +122,50 @@ def concat_wavs_to_mp3(input_dir, output_file):
     print(f"Combined MP3 saved to {output_file}")
     wipe_temp_dir("temp")
 
+
 def main():
     if len(sys.argv) != 2:
-        print("Usage: python script.py <path_to_epub>")
+        print("Usage: python main.py <path_to_epub>")
         sys.exit(1)
-        
+
     epub_path = sys.argv[1]
-    
+    book_title = None
+    success = False
+
     try:
         chapters, book_title = read_epub(epub_path)
-        
         wipe_temp_dir('temp')
-        i=1
+        i = 1
         # Print chapters and their content
         for title, content in chapters.items():
-            request = TTSRequest(
-                speaker_files=["sample.wav"],
-                text=content,
-            )
-            output = tts.generate_speech(request)
-            output.save(f"temp/chapter_{i}.wav")
-            i+=1
-        input_director = "temp"
-        output_mp3 = f"{book_title}.mp3"
-        concat_wavs_to_mp3(input_director, output_mp3)
-            
+            try:
+                request = TTSRequest(
+                    speaker_files=["sample.wav"],
+                    text=content,
+                )
+                output = tts.generate_speech(request)
+                output.save(f"temp/chapter_{i}.wav")
+                i += 1
+            except Exception as e:
+                print(f"Error processing chapter {i}: {str(e)}")
+                continue
+        success = True
     except Exception as e:
         print(f"Error processing EPUB file: {str(e)}")
+
+    # Run concatenation regardless of previous errors
+    try:
+        input_directory = "temp"
+        # If book_title wasn't set due to error, use a default name
+        output_mp3 = f"{book_title if book_title else 'audiobook'}.mp3"
+        concat_wavs_to_mp3(input_directory, output_mp3)
+        print(f"Successfully created {output_mp3}")
+    except Exception as e:
+        print(f"Error during audio concatenation: {str(e)}")
+        sys.exit(1)
+
+    # Only exit with error if both epub processing and concatenation failed
+    if not success:
         sys.exit(1)
 
 if __name__ == "__main__":
