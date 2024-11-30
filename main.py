@@ -80,6 +80,7 @@ def wipe_temp_dir(temp_dir):
         
         for file in os.listdir(temp_dir):
             file_path = os.path.join(temp_dir, file)
+            if file_path.endswith(".txt"): continue
             
             if os.path.isfile(file_path):
                 os.remove(file_path)
