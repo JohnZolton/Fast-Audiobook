@@ -6,7 +6,9 @@
 
 `cd Fast-Audiobook`
 
-install dependencies and such in your python env
+create your python env
+
+`pip install -r requirements.txt`
 
 add a "sample.wav" file in the Voices dir with your speaker
 
