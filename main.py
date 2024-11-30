@@ -75,6 +75,8 @@ def wipe_temp_dir(temp_dir):
         if not os.path.exists(temp_dir):
             print(f"Directory {temp_dir} does not exist.")
             return
+
+        concat_wavs_to_mp3(temp_dir, "tempfile_output.mp3")
         
         for file in os.listdir(temp_dir):
             file_path = os.path.join(temp_dir, file)
@@ -107,28 +109,44 @@ def concat_wavs_to_mp3(input_dir, output_file):
         return int(match.group(1)) if match else float('inf')
 
     wav_files.sort(key=extract_chapter_number)
-
-    # Start with an empty AudioSegment
-    combined_audio = AudioSegment.empty()
-
-    # Load and concatenate each .wav file
-    for file in wav_files:
-        print(f"Processing {file}...")
-        audio = AudioSegment.from_wav(file)
-        combined_audio += audio
-
-    # Export the result as an MP3
-    combined_audio.export(output_file, format="mp3")
-    print(f"Combined MP3 saved to {output_file}")
-    wipe_temp_dir("temp")
+    
+    print(f"Converting WAVs in: {input_dir}")
+    for wav_file in os.listdir(input_dir):
+        if wav_file.endswith('.wav'):
+            wav_path = os.path.join(input_dir, wav_file)
+            mp3_path = wav_path.replace('.wav', '.mp3')
+            print(f"Converting {wav_file} to MP3...")
+            audio = AudioSegment.from_wav(wav_path)
+            audio.export(mp3_path, format="mp3")
+            del audio  # Clear memory
+    
+    print(f"Concatenating MP3s from: {input_dir}")
+    # Get and sort MP3 files
+    mp3_files = [f for f in os.listdir(input_dir) if f.endswith('.mp3')]
+    mp3_files.sort(key=lambda x: int(re.search(r'chapter_(\d+)', x).group(1)))
+    
+    # Read all MP3s
+    segments = []
+    for mp3_file in mp3_files:
+        mp3_path = os.path.join(input_dir, mp3_file)
+        print(f"Reading {mp3_file}...")
+        segments.append(AudioSegment.from_mp3(mp3_path))
+    
+    # Concatenate and export
+    print("Concatenating files...")
+    final_audio = sum(segments)
+    print(f"Exporting to {output_file}...")
+    final_audio.export(output_file, format="mp3")
+    print(f"Completed: Export to {output_file}!")
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python main.py <path_to_epub>")
+    if len(sys.argv) != 3:
+        print("Usage: python main.py </path/to/file.epub> <voice.wav>")
         sys.exit(1)
 
     epub_path = sys.argv[1]
+    voice = sys.argv[2]
     book_title = None
     success = False
 
@@ -140,7 +158,7 @@ def main():
         for title, content in chapters.items():
             try:
                 request = TTSRequest(
-                    speaker_files=["sample.wav"],
+                    speaker_files=[f"Voices/{voice}"],
                     text=content,
                 )
                 output = tts.generate_speech(request)
